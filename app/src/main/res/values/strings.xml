@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">Multipli</string>
+    <string name="title_activity_bluethooth_scan">bluethooth_scan</string>
+    <string name="title_activity_bluetoothscan">bluetoothscan</string>
+    <string name="title_activity_ble">BLE</string>
+    <string name="stop">Stop</string>
+</resources>

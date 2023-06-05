@@ -58,6 +58,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
 
 
+
         permissionLauncher = registerForActivityResult(         // si sta controllando quali permessi si hanno
             ActivityResultContracts.RequestMultiplePermissions()) { permission ->
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S){
@@ -68,6 +69,7 @@ class MainActivity : AppCompatActivity() {
             isBluetoothScanGranted =
                 permission[Manifest.permission.BLUETOOTH_SCAN] ?: isBluetoothScanGranted
         }
+
             isRecordAudioGranted = permission[Manifest.permission.RECORD_AUDIO] ?: isRecordAudioGranted
             isCorseLocationGranted = permission[Manifest.permission.ACCESS_COARSE_LOCATION] ?: isCorseLocationGranted
             isFineLocationGranted = permission[Manifest.permission.ACCESS_FINE_LOCATION] ?: isFineLocationGranted
@@ -107,22 +109,36 @@ class MainActivity : AppCompatActivity() {
             val intentscan = Intent(this, serviceBLE::class.java)
             val audioService = Intent(this, activityRecordAudio::class.java)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            try {
+                uiUpdate()
+                stopButton.setOnClickListener{
+                    mService.stopAudio()
+                    updatedb = false
+                    stopButton.visibility = View.INVISIBLE
 
+                }
                 //applicationContext.startForegroundService(audioService)
                 Intent(this, serviceBLE::class.java).also { intent ->
                     bindService(intent, connection, Context.BIND_AUTO_CREATE)}
-                applicationContext.startForegroundService(intentscan)
+                if (Build.VERSION.SDK_INT > Build.VERSION_CODES.S){
+                    applicationContext.startForegroundService(intentscan)
+                    applicationContext.startForegroundService(audioService)
 
-            applicationContext.startForegroundService(audioService)
+                }
+                else {
+
+                    applicationContext.startService(intentscan)
+                    applicationContext.startService(audioService)
+                }
 
 
-            uiUpdate()
-            stopButton.setOnClickListener{
-                mService.stopAudio()
-                updatedb = false
-                stopButton.visibility = View.INVISIBLE
 
+
+            }catch (e:Exception){
+                e.printStackTrace()
             }
+
+
 
 
 
@@ -207,10 +223,9 @@ class MainActivity : AppCompatActivity() {
 
             contextprova= this
             Thread {
-                Thread.sleep(700)
                 while (true) {
-                    if (visible) {
-
+                    //if (visible) {
+                        if(mBound){
                         if (mService.beaconFind()) {
                             if (mService.allert){
                                 mService.allertNotification()
@@ -221,7 +236,9 @@ class MainActivity : AppCompatActivity() {
                                 roomText.text = "Stanza : Studio"
 
                         }
-                    }
+
+                        }// qua
+                   // }//questo
                 }
             }.start()
 
@@ -258,20 +275,25 @@ class MainActivity : AppCompatActivity() {
 
      fun allertDialog(){
         runOnUiThread {
-            val builder: AlertDialog? = AlertDialog.Builder(this)
-                .setTitle("Stanza")
-                .setMessage("Ti trovi all'interno di questa stanza?"+ roomText.text)
-                .setPositiveButton("Si") { dialog, which ->
-                    mService.startAudio()
-                    stopButton.visibility = View.VISIBLE
-                    mService.stoScan()
-                    dbAudioUpdate()
-                }
-                .setNegativeButton("No") { dialog, which ->
-                    roomText.text = "Stanza : "
-                    mService.allertNotificationRestart()
-                }
-                .show()
+            try {
+                val builder: AlertDialog? = AlertDialog.Builder(this)
+                    .setTitle("Stanza")
+                    .setMessage("Ti trovi all'interno di questa stanza?"+ roomText.text)
+                    .setPositiveButton("Si") { dialog, which ->
+                        mService.startAudio()
+                        stopButton.visibility = View.VISIBLE
+                        mService.stoScan()
+                        dbAudioUpdate()
+                    }
+                    .setNegativeButton("No") { dialog, which ->
+                        roomText.text = "Stanza : "
+                        mService.allertNotificationRestart()
+                    }
+                    .show()
+            }catch (e:Exception){
+                e.printStackTrace()
+            }
+
         }
 
     }

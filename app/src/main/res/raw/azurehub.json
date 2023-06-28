@@ -1,0 +1,19 @@
+{
+  "@context": "dtmi:dtdl:context;2",
+  "@id": "Tesi:Oneplus8",
+  "@type": "Interface",
+  "displayName": "Fonometro",
+  "description": "Reports current temperature and provides desired temperature control.",
+  "contents": [
+    {
+      "@type": [
+        "Telemetry",
+        "Audio"
+      ],
+      "name": "audio",
+      "displayName": "Audio",
+      "description": "Riporta l'audio all'interno della stanza",
+      "schema": "double",
+      "unit": "decibel"
+    }]
+}

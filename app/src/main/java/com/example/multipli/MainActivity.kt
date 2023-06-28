@@ -12,6 +12,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
+import android.util.Xml.Encoding
 import android.view.View
 import android.widget.Button
 import android.widget.TextView
@@ -20,6 +21,25 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.azure.core.http.ContentType
+import com.azure.core.util.serializer.JsonSerializer
+import com.google.gson.JsonElement
+import com.google.gson.JsonObject
+import com.microsoft.azure.sdk.iot.device.DeviceClient
+import com.microsoft.azure.sdk.iot.device.DeviceClientConfig
+import com.microsoft.azure.sdk.iot.device.InternalClient
+import com.microsoft.azure.sdk.iot.device.IotHubClientProtocol
+import com.microsoft.azure.sdk.iot.device.IotHubEventCallback
+import com.microsoft.azure.sdk.iot.device.IotHubStatusCode
+import com.microsoft.azure.sdk.iot.device.Message
+import com.microsoft.azure.sdk.iot.device.exceptions.IotHubException
+import com.microsoft.azure.sdk.iot.device.transport.TransportUtils
+import com.microsoft.azure.sdk.iot.provisioning.security.SecurityProvider
+import com.microsoft.azure.sdk.iot.device.transport.https.HttpsTransportManager
+import com.microsoft.azure.sdk.iot.device.transport.amqps.IoTHubConnectionType
+import java.nio.Buffer
+import java.nio.charset.Charset
+
 
 class MainActivity : AppCompatActivity() {
     private lateinit var permissionLauncher : ActivityResultLauncher<Array<String>>
@@ -108,6 +128,7 @@ class MainActivity : AppCompatActivity() {
             stopButton = findViewById(R.id.stopbutton)
             val intentscan = Intent(this, serviceBLE::class.java)
             val audioService = Intent(this, activityRecordAudio::class.java)
+            val intentHubAzure = Intent(this,IotHubAzureConnection::class.java )
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             try {
                 uiUpdate()
@@ -120,9 +141,11 @@ class MainActivity : AppCompatActivity() {
                 //applicationContext.startForegroundService(audioService)
                 Intent(this, serviceBLE::class.java).also { intent ->
                     bindService(intent, connection, Context.BIND_AUTO_CREATE)}
+
                 if (Build.VERSION.SDK_INT > Build.VERSION_CODES.S){
                     applicationContext.startForegroundService(intentscan)
                     applicationContext.startForegroundService(audioService)
+                    //this.startActivity(intentHubAzure)
 
                 }
                 else {
@@ -234,6 +257,10 @@ class MainActivity : AppCompatActivity() {
 
                             if (mService.deviceRoom() == "testLab")
                                 roomText.text = "Stanza : Studio"
+                            else if (mService.deviceRoom()== "testLab3")
+                                roomText.text = "Stanza : Salone"
+                            else if (mService.deviceRoom()== "testLab5")
+                                roomText.text = "Stanza : Cucina"
 
                         }
 
@@ -305,6 +332,35 @@ class MainActivity : AppCompatActivity() {
                     val audioTry: Int = mService.dbIsReady()
                     val dB: Double = 20 * Math.log10(audioTry.toDouble())
                     val dbInt: Int = dB.toInt()
+                    val connString : String = "HostName=raccoltadatiTesi.azure-devices.net;DeviceId=Tesi:Oneplus8;SharedAccessKey=pgM6QSl7a4qLF/1CszYXLhW6fHm6FgMIaIiApdoBa68="
+                    if (mService.mediaValue().size == 30){
+                       val media= mService.mediaValue().average()
+                        val dbMedia : Int = 20 *Math.log10(media).toInt()
+                        val mediaRSSI = mService.RSSId.average()
+                        mService.clearList()
+                    val protocol : IotHubClientProtocol = IotHubClientProtocol.HTTPS
+                    val client : DeviceClient = DeviceClient(connString,protocol)
+                    client.open()
+                    try {
+                        val bodyMessage = JsonObject()
+                        bodyMessage.addProperty("Noise",dbMedia)
+                        bodyMessage.addProperty("RSSI",mediaRSSI)
+                        bodyMessage.addProperty("Room",roomText.text.toString())
+
+                        val massageString= bodyMessage.toString()
+                        val massegeByte = massageString.toByteArray()
+                        val msgString : String = "{Value:" + dbInt +
+                                ",Room:" + roomText.text + "}"
+                        val message = Message(massegeByte)
+                        message.contentEncoding = "utf-8"
+                        message.contentType = "application/json"
+
+
+                        client.sendEventAsync(message, iotHubEventCallback,this)
+                    }catch (e : IotHubException){
+                        println(e)
+                    }
+                    }
                     roomTextdb.text = dbInt.toString() + "dB"
                     Thread.sleep(500)
                 }
@@ -312,6 +368,25 @@ class MainActivity : AppCompatActivity() {
             }.start()
 
     }
+
+    val iotHubEventCallback : IotHubEventCallback = object : IotHubEventCallback {
+        override fun execute(status: IotHubStatusCode, context: Any) {
+            if (status== IotHubStatusCode.OK){
+                println("ha inviato")
+
+            }
+            else{
+                println("non ha inviato")
+            }
+
+        }
+    }
+
+
+
+    // qui faccio la parte di Microsoft IoT
+
+
 
 
 }

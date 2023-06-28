@@ -22,16 +22,26 @@ import androidx.annotation.RequiresApi
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import com.microsoft.azure.sdk.iot.device.ClientOptions
+import com.microsoft.azure.sdk.iot.device.DeviceClient
+import com.microsoft.azure.sdk.iot.device.IotHubClientProtocol
+import com.microsoft.azure.sdk.iot.device.IotHubEventCallback
+import com.microsoft.azure.sdk.iot.device.IotHubStatusCode
+import com.microsoft.azure.sdk.iot.device.Message
+import com.microsoft.azure.sdk.iot.device.exceptions.IotHubException
 import java.io.File
 
  class activityRecordAudio: Service() {
      lateinit var audio : MediaRecorder
      private lateinit var filetoDelate: File
      private lateinit var  audioDirectory: File
+     val samples : ArrayList<Int> = ArrayList()
      private val binderAudio = LocalBinderAudio()
       var  amplitude : Int = 0
      var ok : Boolean = false
      private var stop: Boolean = true
+     var media : Double = 0.0
+     var mediadb : Double = 0.0
 
 
      override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -148,6 +158,7 @@ import java.io.File
                  audio.start()
 
 
+
      }
              else{
              val audioDirect : String = Environment.getExternalStorageDirectory().path
@@ -178,6 +189,34 @@ import java.io.File
              }
      }
 
+     private fun sendDataTest() {
+         val connString : String = "HostName=raccoltadatiTesi.azure-devices.net;DeviceId=Tesi:Oneplus8;SharedAccessKey=pgM6QSl7a4qLF/1CszYXLhW6fHm6FgMIaIiApdoBa68="
+         val protocol : IotHubClientProtocol = IotHubClientProtocol.HTTPS
+         val client : DeviceClient = DeviceClient(connString,protocol)
+         client.open()
+         try {
+             val dB: Double = 20 * Math.log10(amplitude.toDouble())
+             val message = Message(dB.toString())
+             client.sendEventAsync(message, iotHubEventCallback,this)
+         }catch (e : IotHubException){
+             println(e)
+         }
+
+     }
+
+     val iotHubEventCallback : IotHubEventCallback = object : IotHubEventCallback{
+         override fun execute(status: IotHubStatusCode, context: Any) {
+             if (status== IotHubStatusCode.OK){
+                 println("ha inviato")
+                 
+             }
+             else{
+                 println("non ha inviato")
+             }
+
+         }
+     }
+
 
      fun audioStop(){
          audio.stop()
@@ -187,14 +226,35 @@ import java.io.File
          stop = false
      }
      fun startRecordingAudio(): Int {
-           while (stop){
+           while (true){
          amplitude = audio.maxAmplitude
 
-         stopForeground(STOP_FOREGROUND_REMOVE)
-         stopSelf()
+               if (samples.size >= 30){
+                   mediaSamples()
+               }
+               else
+                   samples.add(amplitude)
+
+               val soundPressure = amplitude.toDouble() / Short.MAX_VALUE
+               val prova = soundPressure * soundPressure
+               val intensita = 10* Math.log10(prova)
+               // prova a calcolare la potenza
+               val valoreDiRiferimento = Short.MAX_VALUE
+               val potenza = (amplitude * amplitude).toDouble() / (2 * valoreDiRiferimento * valoreDiRiferimento).toDouble()
+               //sendDataTest()
+
+         //stopForeground(STOP_FOREGROUND_REMOVE)
+         //stopSelf()
          return amplitude
      }
          return 0
+     }
+     fun mediaSamples(){
+        media =  samples.average()
+         media = 20* Math.log10(media)
+     }
+     fun clear(){
+         samples.clear()
      }
 
 

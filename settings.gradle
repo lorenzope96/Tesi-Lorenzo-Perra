@@ -10,6 +10,12 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        maven {
+            url 'https://pkgs.dev.azure.com/MicrosoftDeviceSDK/DuoSDK-Public/_packaging/Duo-SDK-Feed/maven/v1'
+        }
+        maven{
+            url 'https://search.maven.org/artifact/com.microsoft.azure.sdk.iot/iot-device-client/1.30.1/jar'
+        }
     }
 }
 rootProject.name = "Multipli"

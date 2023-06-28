@@ -41,6 +41,8 @@ class serviceBLE: Service() {
     private lateinit var mServiceAudio: activityRecordAudio
     private var mBoundAudio: Boolean = false
     private val provaTempo: Long = 1000
+    var RSSI : Int = 0
+    var RSSId : ArrayList<Int> = ArrayList()
    // private lateinit var handler: Handler
     private var vai : Boolean = false
 
@@ -65,6 +67,8 @@ class serviceBLE: Service() {
        // handler = Handler(Looper.myLooper()!!)
 
         beaconBL.add("testLab")
+        beaconBL.add("testLab3")
+        beaconBL.add("testLab5")
         //startScan(bluetoothLeScanner)
         val pendingIntent: PendingIntent =
             Intent(this, serviceBLE::class.java).let { notificationIntent ->
@@ -208,15 +212,34 @@ class serviceBLE: Service() {
                  if (deviceRSSI != null) {
                      if (deviceName != alreadyConnected   ){
                          if(deviceRSSI > -90){
+                             RSSI = deviceRSSI
                              alreadyConnected = deviceName
                              start= true
                              allert = true
                              roomNotification()
+
+
+
                          }
                          else{
                              alreadyConnected = ""
 
                          }
+                     }
+                     else{
+
+                         if (deviceRSSI < -105){
+
+                             alreadyConnected = ""
+                             stopAudio()
+                         }
+                         else{
+                             if (RSSId.size <= 15)
+                                 RSSId.add(RSSI)
+                             else
+                                 RSSId.clear() // all'incira ogni 30 secondi
+                         }
+
                      }
 
                  }
@@ -318,6 +341,12 @@ class serviceBLE: Service() {
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
 }
+    fun mediaValue(): ArrayList<Int> {
+        return mServiceAudio.samples
+    }
+    fun clearList(){
+        mServiceAudio.clear()
+    }
 
      override fun onDestroy() {
          super.onDestroy()

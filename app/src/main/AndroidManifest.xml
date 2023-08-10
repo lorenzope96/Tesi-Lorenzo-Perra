@@ -44,27 +44,26 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.Multipli"
-        tools:targetApi="31">
-        <activity
-            android:name=".IotHubAzureConnection"
-            android:exported="false"
-            android:label="@string/title_activity_iot_hub_azure_connection"
-            android:theme="@style/Theme.Multipli" />
-
+        tools:targetApi="31"
+        android:usesCleartextTraffic="true">
         <service
             android:name=".serviceBLE"
-            android:permission="MainActivity" />
+            android:permission="MainActivity"
+            android:foregroundServiceType="location"
+            android:singleUser="true"/>
+
         <service
             android:name=".activityRecordAudio"
             android:foregroundServiceType="microphone"
-            android:permission="MainActivity" />
+            android:permission="MainActivity"
+            android:singleUser="true"/>
 
         <activity
             android:name=".MainActivity"
-            android:exported="true">
+            android:exported="true"
+            android:launchMode="singleTask">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>

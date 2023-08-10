@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".stanze">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/stanza1txt"
+                android:layout_width="130dp"
+                android:layout_height="match_parent"
+
+                android:gravity="center"
+                android:text="Seminterrato" />
+
+            <TextView
+                android:id="@+id/textIstantSeminterrato"
+                android:layout_width="130dp"
+                android:layout_height="wrap_content"
+                android:baselineAligned="false"
+                android:text="" />
+        </LinearLayout>
+
+
+
+        <com.jjoe64.graphview.GraphView
+            android:id="@+id/stanza1"
+            android:layout_width="match_parent"
+            android:layout_height="182dp" />
+
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/stanza2txt"
+                android:layout_width="132dp"
+                android:layout_height="wrap_content"
+
+                android:gravity="center"
+                android:text="Primo Piano" />
+
+            <TextView
+                android:id="@+id/textIstantPrimoPiano"
+                android:layout_width="136dp"
+                android:layout_height="match_parent"
+                android:text="" />
+        </LinearLayout>
+
+        <com.jjoe64.graphview.GraphView
+            android:id="@+id/stanza2"
+            android:layout_width="match_parent"
+            android:layout_height="182dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="24dp"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/stanza3txt"
+                android:layout_width="132dp"
+                android:layout_height="29dp"
+                android:gravity="center"
+                android:text="Secondo Piano" />
+
+            <TextView
+                android:id="@+id/textIstantSecondoPiano"
+                android:layout_width="144dp"
+                android:layout_height="match_parent"
+                android:layout_gravity="center"
+                android:text="" />
+
+        </LinearLayout>
+
+
+
+
+        <com.jjoe64.graphview.GraphView
+            android:id="@+id/stanza3"
+            android:layout_width="match_parent"
+            android:layout_height="182dp" />
+
+
+    </LinearLayout>
+
+</FrameLayout>

@@ -32,6 +32,7 @@ import com.microsoft.azure.sdk.iot.device.exceptions.IotHubException
 import java.io.File
 
  class activityRecordAudio: Service() {
+     private var g=0
      lateinit var audio : MediaRecorder
      private lateinit var filetoDelate: File
      private lateinit var  audioDirectory: File
@@ -42,6 +43,7 @@ import java.io.File
      private var stop: Boolean = true
      var media : Double = 0.0
      var mediadb : Double = 0.0
+     var funzione = true
 
 
      override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -64,10 +66,10 @@ import java.io.File
 
 
              val notification: Notification = Notification.Builder(this, "Audio")
-                 .setOngoing(true)
+                 .setOngoing(false)  // se su true non si può togliere
                  .setForegroundServiceBehavior(Notification.FOREGROUND_SERVICE_IMMEDIATE)
                  .setContentTitle("Registrazione audio")
-                 .setContentText("sta registrando l'audio per poter campionare i valori di rumore")
+                 .setContentText("è stato attivato il service per poter registrare l'audio, appena si farà l'accesso a una stanza l'applicazione inzierà a registrare l'audio")
                  .setSmallIcon(R.drawable.ic_launcher_foreground)
                  .setContentIntent(pendingIntent)
 
@@ -87,7 +89,7 @@ import java.io.File
 
 
                  val notification: Notification = Notification.Builder(this, "Audio")
-                     .setOngoing(true)
+                     .setOngoing(false) // se su true non si può togliere
                      .setContentTitle("Registrazione audio")
                      .setContentText("sta registrando l'audio per poter campionare i valori di rumore")
                      .setSmallIcon(R.drawable.ic_launcher_foreground)
@@ -109,6 +111,9 @@ import java.io.File
              }
          }
 
+
+         //audioNotificationremove()
+
          return START_STICKY
 
      }
@@ -122,7 +127,11 @@ import java.io.File
      }
 
 
-
+        //fun audioNotificationremove(){
+            //val removeContext : String = Context.NOTIFICATION_SERVICE
+            //val removeNotificationManager : NotificationManager = this.getSystemService(removeContext) as NotificationManager
+            //removeNotificationManager.cancel(13)
+      //  }
 
 
 
@@ -136,14 +145,10 @@ import java.io.File
 
          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
 
+
              audioDirectory = context.getExternalFilesDir(Environment.DIRECTORY_RECORDINGS)!!
          val file = File(audioDirectory, "test" + ".mp3")
          filetoDelate = file
-
-
-
-
-
                   audio= MediaRecorder(context).apply {
                      setAudioSource(MediaRecorder.AudioSource.MIC)
                      AudioManager.PROPERTY_SUPPORT_AUDIO_SOURCE_UNPROCESSED
@@ -152,8 +157,10 @@ import java.io.File
                      setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB)
                      prepare()
                  }
+
                     ok= true
                     stop= true
+             funzione= true
 
                  audio.start()
 
@@ -180,6 +187,7 @@ import java.io.File
              audio.prepare()
              ok= true
              stop= true
+             funzione= true
              audio.start()
 
 
@@ -189,65 +197,37 @@ import java.io.File
              }
      }
 
-     private fun sendDataTest() {
-         val connString : String = "HostName=raccoltadatiTesi.azure-devices.net;DeviceId=Tesi:Oneplus8;SharedAccessKey=pgM6QSl7a4qLF/1CszYXLhW6fHm6FgMIaIiApdoBa68="
-         val protocol : IotHubClientProtocol = IotHubClientProtocol.HTTPS
-         val client : DeviceClient = DeviceClient(connString,protocol)
-         client.open()
-         try {
-             val dB: Double = 20 * Math.log10(amplitude.toDouble())
-             val message = Message(dB.toString())
-             client.sendEventAsync(message, iotHubEventCallback,this)
-         }catch (e : IotHubException){
-             println(e)
-         }
-
-     }
-
-     val iotHubEventCallback : IotHubEventCallback = object : IotHubEventCallback{
-         override fun execute(status: IotHubStatusCode, context: Any) {
-             if (status== IotHubStatusCode.OK){
-                 println("ha inviato")
-                 
-             }
-             else{
-                 println("non ha inviato")
-             }
-
-         }
-     }
-
-
      fun audioStop(){
+         stop = false
+         funzione = false
          audio.stop()
+         audio.reset()
+         audio.release()
          if (Build.VERSION.SDK_INT> Build.VERSION_CODES.Q) {
              filetoDelate.delete()
          }
-         stop = false
+
      }
-     fun startRecordingAudio(): Int {
-           while (true){
-         amplitude = audio.maxAmplitude
+     fun startRecordingAudio(){
+         Thread {
+             while (funzione) {
+                 amplitude = audio.maxAmplitude
 
-               if (samples.size >= 30){
-                   mediaSamples()
-               }
-               else
-                   samples.add(amplitude)
+                 if (samples.size >= 120) {
+                     mediaSamples()
+                 } else
+                     samples.add(amplitude)
+                 Thread.sleep(500)
+                 //sendDataTest()
 
-               val soundPressure = amplitude.toDouble() / Short.MAX_VALUE
-               val prova = soundPressure * soundPressure
-               val intensita = 10* Math.log10(prova)
-               // prova a calcolare la potenza
-               val valoreDiRiferimento = Short.MAX_VALUE
-               val potenza = (amplitude * amplitude).toDouble() / (2 * valoreDiRiferimento * valoreDiRiferimento).toDouble()
-               //sendDataTest()
+                 //stopForeground(STOP_FOREGROUND_REMOVE)
+                 //stopSelf()
 
-         //stopForeground(STOP_FOREGROUND_REMOVE)
-         //stopSelf()
-         return amplitude
-     }
-         return 0
+             }
+             Thread.interrupted()
+         }.start()
+
+
      }
      fun mediaSamples(){
         media =  samples.average()
@@ -258,8 +238,10 @@ import java.io.File
      }
 
 
+
      override fun onDestroy() {
          super.onDestroy()
+         funzione = true
         stopForeground(STOP_FOREGROUND_REMOVE)
          stopSelf()//
      }

@@ -19,10 +19,16 @@ import android.widget.TextView
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.ui.res.booleanResource
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.viewpager2.widget.ViewPager2
 import com.azure.core.http.ContentType
 import com.azure.core.util.serializer.JsonSerializer
+import com.google.android.material.tabs.TabLayout
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.microsoft.azure.sdk.iot.device.DeviceClient
@@ -42,12 +48,16 @@ import java.nio.charset.Charset
 
 
 class MainActivity : AppCompatActivity() {
+    private var chiudi: Boolean = false
     private lateinit var permissionLauncher : ActivityResultLauncher<Array<String>>
-    private lateinit var roomText:TextView
-    private lateinit var roomTextdb:TextView
-    private lateinit var stopButton:Button
     private lateinit var contextprova : Context
     private lateinit var mService: serviceBLE
+    private lateinit var pageView : ViewPager2
+    private lateinit var tab : TabLayout
+    private lateinit var textViewModel: TextViewModel
+    private lateinit var builder: AlertDialog
+    private lateinit var intentBleDachiudere : Intent
+    private lateinit var intentAudioDachiudere : Intent
     private var isBluetoothAdvertiseGranted = false
     private var isBluetoothConnectGranted = false
     private var isBluetoothScanGranted = false
@@ -57,20 +67,31 @@ class MainActivity : AppCompatActivity() {
     private var isNotificationGranted = false
     private var mBound: Boolean = false
     private var visible : Boolean = true
-    private  var updatedb : Boolean = true
+    private  var updatedb : Boolean = false
+    private var isUpdatingStanza = true
+    var room : String =""
+    var frag : stanza = stanza()
+    var frag2: stanze = stanze()
+    var allertDialog : Boolean = true
+    var c = 0
+    private var chiudiservice = false
+
 
 
     private val connection = object : ServiceConnection {    // serviceBLE
 
         override fun onServiceConnected(className: ComponentName, service: IBinder) {
-            // We've bound to LocalService, cast the IBinder and get LocalService instance.
-           val binder=service as serviceBLE.LocalBinder
-            mService = binder.getService()
-            mBound = true
+                val binder = service as serviceBLE.LocalBinder
+                mService = binder.getService()
+                mBound = true
+
         }
+
+
         override fun onServiceDisconnected(arg0: ComponentName) {
             mBound = false
         }
+
     }
 
 
@@ -98,6 +119,7 @@ class MainActivity : AppCompatActivity() {
                     permission[Manifest.permission.POST_NOTIFICATIONS] ?: isNotificationGranted
             }
             }
+
         requestPermissions()    // fa partire la funzione per richiedere i permessi
         // serve per accendere il bluethooth nel caso fosse spento
         val bluetoothManager: BluetoothManager = getSystemService(BluetoothManager::class.java)
@@ -118,59 +140,70 @@ class MainActivity : AppCompatActivity() {
                 requestPermissions() // nel caso non si abbiano i permessi viene fatta nuovamente una richiesta
             }
 
-        }}
-
-
+        }
+        }
         setContentView(R.layout.activity_main)
-            val textView:TextView= findViewById(R.id.room)
-            roomText= textView
-            roomTextdb = findViewById(R.id.textdb)
-            stopButton = findViewById(R.id.stopbutton)
+        pageView = findViewById(R.id.viewpager)
+        tab=findViewById(R.id.tab)
+        textViewModel = ViewModelProvider(this).get(TextViewModel::class.java)
+
             val intentscan = Intent(this, serviceBLE::class.java)
             val audioService = Intent(this, activityRecordAudio::class.java)
-            val intentHubAzure = Intent(this,IotHubAzureConnection::class.java )
+        intentBleDachiudere = intentscan
+        intentAudioDachiudere = audioService
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             try {
+                setUpTabs()
                 uiUpdate()
-                stopButton.setOnClickListener{
-                    mService.stopAudio()
-                    updatedb = false
-                    stopButton.visibility = View.INVISIBLE
-
-                }
-                //applicationContext.startForegroundService(audioService)
                 Intent(this, serviceBLE::class.java).also { intent ->
                     bindService(intent, connection, Context.BIND_AUTO_CREATE)}
 
                 if (Build.VERSION.SDK_INT > Build.VERSION_CODES.S){
+                    if (!serviceBLE.isRunning()){
                     applicationContext.startForegroundService(intentscan)
                     applicationContext.startForegroundService(audioService)
-                    //this.startActivity(intentHubAzure)
-
+                    }
                 }
                 else {
+                    if (!serviceBLE.isRunning()) {
+                        applicationContext.startService(intentscan)
+                        applicationContext.startService(audioService)
+                    }
 
-                    applicationContext.startService(intentscan)
-                    applicationContext.startService(audioService)
                 }
-
-
 
 
             }catch (e:Exception){
                 e.printStackTrace()
             }
 
-
-
-
-
         }
-
-
-
-
     }
+
+    private fun setUpTabs() {
+        val adapter = Adapter(supportFragmentManager, lifecycle)
+        adapter.addFragment(stanza(), "Stanza")
+        adapter.addFragment(stanze(), "Stanze")
+        pageView.adapter = adapter
+
+        pageView.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
+            override fun onPageSelected(position: Int) {
+                tab.setScrollPosition(position, 0f, true)
+            }
+        })
+
+        tab.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
+            override fun onTabSelected(tab: TabLayout.Tab) {
+                pageView.currentItem = tab.position
+            }
+
+            override fun onTabUnselected(tab: TabLayout.Tab) {}
+
+            override fun onTabReselected(tab: TabLayout.Tab) {}
+        })
+    }
+
+
     private fun requestPermissions() {     // in base alle autorizzazioni che non si hanno vengono messe dentro un vettore per poter essere richieste
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             isBluetoothAdvertiseGranted = ContextCompat.checkSelfPermission(
@@ -246,38 +279,82 @@ class MainActivity : AppCompatActivity() {
 
             contextprova= this
             Thread {
+                try{
                 while (true) {
-                    //if (visible) {
-                        if(mBound){
-                        if (mService.beaconFind()) {
-                            if (mService.allert){
-                                mService.allertNotification()
-                                allertDialog()
+
+                    if (chiudi == false) {
+                            if (mBound) {
+
+
+                                if (mService.beaconFind()) {
+                                    if (mService.allert) {
+                                        mService.allertNotification()
+                                        if (c >= 1)
+                                            builder.cancel()
+                                        if (mService.alreadyConnected == "")
+                                            allertDialog()
+
+                                    if (mService.deviceRoom() == "testLab") {
+                                        room = "Stanza : Seminterrato"
+                                    } else if (mService.deviceRoom() == "testLab3") {
+                                        room = "Stanza : Primo Piano"
+                                    } else if (mService.deviceRoom() == "testLab5") {
+                                        room = "Stanza : Secondo Piano"
+                                    }
+                                    }
+                                }
+                                else{
+
+                                    if (mService.deviceName !=""){
+                                    if (mService.deviceRoom() == "testLab") {
+                                        room = "Stanza : Seminterrato"
+                                        textViewModel.textData.postValue(room)
+                                    } else if (mService.deviceRoom() == "testLab3") {
+                                        room = "Stanza : Primo Piano"
+                                        textViewModel.textData.postValue(room)
+                                    } else if (mService.deviceRoom() == "testLab5") {
+                                        room = "Stanza : Secondo Piano"
+                                        textViewModel.textData.postValue(room)
+                                    }
+                                    else{
+                                        room = ""
+                                    }}
+
+                                }
                             }
 
-                            if (mService.deviceRoom() == "testLab")
-                                roomText.text = "Stanza : Studio"
-                            else if (mService.deviceRoom()== "testLab3")
-                                roomText.text = "Stanza : Salone"
-                            else if (mService.deviceRoom()== "testLab5")
-                                roomText.text = "Stanza : Cucina"
 
+                        if (mBound) {
+                            if(mService.restart){
+                                room = ""
+                                textViewModel.textData.postValue(room)
+                            }
+                            if (c >= 1) {
+                                if (mService.allertDialogok == false) {
+                                    builder.dismiss()
+
+                                }
+                            }
+                            updatedb= !mService.restart
                         }
 
-                        }// qua
-                   // }//questo
+                        // }// qua
+                        //}//questo
+                    }
+
+                }//
+                }catch (e:Exception){
+                    print(e)
                 }
             }.start()
 
 
         }
 
-
-
-
     override fun onPause() {
         super.onPause()
         activityPause()
+        visible= false
     }
 
     private fun activityPause() {
@@ -288,33 +365,47 @@ class MainActivity : AppCompatActivity() {
 
     override fun onRestart() {
         super.onRestart()
-        Thread {
             activityResume()
-        }.start()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        mService.notificaaschermospento = true
     }
 
     private fun activityResume() {
         visible = true
+        mService.notificaaschermospento = false
     }
     private fun audiostop(){
         mService.stopAudio()
     }
 
      fun allertDialog(){
+         c=c+1
         runOnUiThread {
             try {
-                val builder: AlertDialog? = AlertDialog.Builder(this)
+                 builder = AlertDialog.Builder(this)
                     .setTitle("Stanza")
-                    .setMessage("Ti trovi all'interno di questa stanza?"+ roomText.text)
+                    .setCancelable(false)
+                    .setMessage("Ti trovi all'interno di questa stanza?"+ room)
                     .setPositiveButton("Si") { dialog, which ->
+                        textViewModel.textData.postValue(room)
                         mService.startAudio()
-                        stopButton.visibility = View.VISIBLE
-                        mService.stoScan()
+                        mService.alreadyConnected = mService.deviceName
+                        //stopButton.visibility = View.VISIBLE
+                        mService.scanStart=10000 //mService.stoScan() //ho commentato questo, probabilmente era lui che non faceva ripartire lo scan
+                        mService.scanStop = 60000
+                        mService.removeNotification()
+                        allertDialog = true
+                        updatedb = true
                         dbAudioUpdate()
+                        c=0
                     }
                     .setNegativeButton("No") { dialog, which ->
-                        roomText.text = "Stanza : "
+                        room = ""
                         mService.allertNotificationRestart()
+                        c=0
                     }
                     .show()
             }catch (e:Exception){
@@ -325,19 +416,20 @@ class MainActivity : AppCompatActivity() {
 
     }
 
-    private fun dbAudioUpdate() {
-            Thread {
-                while (updatedb) {
 
-                    val audioTry: Int = mService.dbIsReady()
-                    val dB: Double = 20 * Math.log10(audioTry.toDouble())
-                    val dbInt: Int = dB.toInt()
-                    val connString : String = "HostName=raccoltadatiTesi.azure-devices.net;DeviceId=Tesi:Oneplus8;SharedAccessKey=pgM6QSl7a4qLF/1CszYXLhW6fHm6FgMIaIiApdoBa68="
-                    if (mService.mediaValue().size == 30){
+    private fun dbAudioUpdate() {
+        mService.dbIsReady()
+            Thread {
+                while (!mService.restart) {
+                    val connString : String = "HostName=raccoltadatiTesi.azure-devices.net;DeviceId=claudio_tesi3;SharedAccessKey=Yz7Hr93gytjI9QtG5iCikSd+byMU0tlFpnwUkKhg604="
+                    if (mService.mediaValue().size == 120){
                        val media= mService.mediaValue().average()
-                        val dbMedia : Int = 20 *Math.log10(media).toInt()
-                        val mediaRSSI = mService.RSSId.average()
+                        val dbMedia : Double = 20 *Math.log10(media)
+                        if(dbMedia == 0.0)
+                            print("zero")
+                        val mediaRSSI = mService.rssiArray().average()
                         mService.clearList()
+                        mService.rssiClear()
                     val protocol : IotHubClientProtocol = IotHubClientProtocol.HTTPS
                     val client : DeviceClient = DeviceClient(connString,protocol)
                     client.open()
@@ -345,26 +437,30 @@ class MainActivity : AppCompatActivity() {
                         val bodyMessage = JsonObject()
                         bodyMessage.addProperty("Noise",dbMedia)
                         bodyMessage.addProperty("RSSI",mediaRSSI)
-                        bodyMessage.addProperty("Room",roomText.text.toString())
+                        bodyMessage.addProperty("Room",room)
 
                         val massageString= bodyMessage.toString()
                         val massegeByte = massageString.toByteArray()
-                        val msgString : String = "{Value:" + dbInt +
-                                ",Room:" + roomText.text + "}"
+                        val msgString : String = "{Value:" + dbMedia +
+                                ",Room:" + room + "}"
                         val message = Message(massegeByte)
                         message.contentEncoding = "utf-8"
                         message.contentType = "application/json"
 
 
                         client.sendEventAsync(message, iotHubEventCallback,this)
-                    }catch (e : IotHubException){
+                        mService.clearList()
+                        client.closeNow()
+                    }
+                    catch (e : IotHubException){
                         println(e)
                     }
                     }
-                    roomTextdb.text = dbInt.toString() + "dB"
+                    //roomTextdb.text = dbInt.toString() + "dB"
                     Thread.sleep(500)
                 }
-                roomTextdb.text = "0"+"dB"
+                val pino= Thread.interrupted()
+                //roomTextdb.text = "0"+"dB"
             }.start()
 
     }
@@ -381,12 +477,16 @@ class MainActivity : AppCompatActivity() {
 
         }
     }
+    class TextViewModel : ViewModel() {
+        val textData: MutableLiveData<String> = MutableLiveData()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        chiudi = true
+        chiudiservice = true
 
 
-
-    // qui faccio la parte di Microsoft IoT
-
-
-
+    }
 
 }

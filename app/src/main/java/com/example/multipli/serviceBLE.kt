@@ -429,12 +429,6 @@ class serviceBLE : Service() {
         mServiceAudio.clear()
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-        stopForeground(STOP_FOREGROUND_REMOVE)
-        stopSelf()
-    }
-
 
 }
 

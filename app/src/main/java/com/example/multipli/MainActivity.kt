@@ -73,6 +73,7 @@ class MainActivity : AppCompatActivity() {
     var frag : stanza = stanza()
     var frag2: stanze = stanze()
     var allertDialog : Boolean = true
+    private var provaprova = true
     var c = 0
     private var chiudiservice = false
 
@@ -151,6 +152,7 @@ class MainActivity : AppCompatActivity() {
             val audioService = Intent(this, activityRecordAudio::class.java)
         intentBleDachiudere = intentscan
         intentAudioDachiudere = audioService
+        provaprova = true
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             try {
                 setUpTabs()
@@ -179,7 +181,6 @@ class MainActivity : AppCompatActivity() {
 
         }
     }
-
     private fun setUpTabs() {
         val adapter = Adapter(supportFragmentManager, lifecycle)
         adapter.addFragment(stanza(), "Stanza")
@@ -278,9 +279,9 @@ class MainActivity : AppCompatActivity() {
    private fun uiUpdate (){
 
             contextprova= this
-            Thread {
+           val threadProva= Thread {
                 try{
-                while (true) {
+                while (provaprova) {
 
                     if (chiudi == false) {
                             if (mBound) {
@@ -342,11 +343,13 @@ class MainActivity : AppCompatActivity() {
                         //}//questo
                     }
 
-                }//
+                }
+
                 }catch (e:Exception){
                     print(e)
                 }
-            }.start()
+            }
+       threadProva.start()
 
 
         }
@@ -421,7 +424,7 @@ class MainActivity : AppCompatActivity() {
         mService.dbIsReady()
             Thread {
                 while (!mService.restart) {
-                    val connString : String = "HostName=raccoltadatiTesi.azure-devices.net;DeviceId=claudio_tesi3;SharedAccessKey=Yz7Hr93gytjI9QtG5iCikSd+byMU0tlFpnwUkKhg604="
+                    val connString : String = "HostName=raccoltadatiTesi.azure-devices.net;DeviceId=Tesi:Oneplus8;SharedAccessKey=pgM6QSl7a4qLF/1CszYXLhW6fHm6FgMIaIiApdoBa68= "
                     if (mService.mediaValue().size == 120){
                        val media= mService.mediaValue().average()
                         val dbMedia : Double = 20 *Math.log10(media)
@@ -485,6 +488,7 @@ class MainActivity : AppCompatActivity() {
         super.onDestroy()
         chiudi = true
         chiudiservice = true
+        provaprova = false
 
 
     }

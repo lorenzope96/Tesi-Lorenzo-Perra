@@ -147,6 +147,7 @@ class stanza : Fragment() {
                         var urlConnectionDatiIst : HttpURLConnection = urlConnectionIst.openConnection() as HttpURLConnection
                         var rd = BufferedReader(InputStreamReader(urlConnectionDatiIst.inputStream))
                         var dati : String = rd.readLine()
+                        urlConnectionDatiIst.disconnect()
                         if (dati != "no" && dati != "non ancora creata"){
                             x = dati.toDouble()
                             if (x==0.0){
@@ -300,12 +301,7 @@ class stanza : Fragment() {
         }.start()
     }
 
-    override fun onStop() {
-        super.onStop()
-        startThreadData = false
-        series.resetData(arrayOf(DataPoint(8.0,0.0)))
-        start = false
-    }
+
 
     override fun onStart() {
         super.onStart()
@@ -321,6 +317,7 @@ class stanza : Fragment() {
 
         //dataDayRequest()
     }
+
 
 
 }

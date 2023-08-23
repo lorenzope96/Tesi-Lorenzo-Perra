@@ -239,12 +239,7 @@ import java.io.File
 
 
 
-     override fun onDestroy() {
-         super.onDestroy()
-         funzione = true
-        stopForeground(STOP_FOREGROUND_REMOVE)
-         stopSelf()//
-     }
+
      }
 
 
